@@ -1,0 +1,160 @@
+version: "3.8"
+
+services:
+
+  # ─── Databases ───────────────────────────────────────────
+  order-db:
+    image: postgres:15-alpine
+    container_name: order-db
+    environment:
+      POSTGRES_USER: order_user
+      POSTGRES_PASSWORD: order_pass
+      POSTGRES_DB: order_db
+    ports:
+      - "5432:5432"
+    volumes:
+      - order-db-data:/var/lib/postgresql/data
+    networks:
+      - gourmet-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U order_user -d order_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  kitchen-db:
+    image: postgres:15-alpine
+    container_name: kitchen-db
+    environment:
+      POSTGRES_USER: kitchen_user
+      POSTGRES_PASSWORD: kitchen_pass
+      POSTGRES_DB: kitchen_db
+    ports:
+      - "5433:5432"
+    volumes:
+      - kitchen-db-data:/var/lib/postgresql/data
+    networks:
+      - gourmet-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U kitchen_user -d kitchen_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  accounting-db:
+    image: postgres:15-alpine
+    container_name: accounting-db
+    environment:
+      POSTGRES_USER: accounting_user
+      POSTGRES_PASSWORD: accounting_pass
+      POSTGRES_DB: accounting_db
+    ports:
+      - "5434:5432"
+    volumes:
+      - accounting-db-data:/var/lib/postgresql/data
+    networks:
+      - gourmet-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U accounting_user -d accounting_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  # ─── Microservices ────────────────────────────────────────
+  order-service:
+    image: nesrinebousrih/gourmet-go-order-service:latest
+    container_name: order-service
+    environment:
+      DATABASE_URL: postgresql://order_user:order_pass@order-db:5432/order_db
+    ports:
+      - "50051:50051"
+    depends_on:
+      order-db:
+        condition: service_healthy
+    networks:
+      - gourmet-network
+    restart: on-failure
+
+  kitchen-service:
+    image: nesrinebousrih/gourmet-go-kitchen-service:latest
+    container_name: kitchen-service
+    environment:
+      DATABASE_URL: postgresql://kitchen_user:kitchen_pass@kitchen-db:5432/kitchen_db
+    ports:
+      - "50052:50052"
+    depends_on:
+      kitchen-db:
+        condition: service_healthy
+    networks:
+      - gourmet-network
+    restart: on-failure
+
+  accounting-service:
+    image: nesrinebousrih/gourmet-go-accounting-service:latest
+    container_name: accounting-service
+    environment:
+      DATABASE_URL: postgresql://accounting_user:accounting_pass@accounting-db:5432/accounting_db
+    ports:
+      - "50053:50053"
+    depends_on:
+      accounting-db:
+        condition: service_healthy
+    networks:
+      - gourmet-network
+    restart: on-failure
+
+  # ─── Orchestrator ─────────────────────────────────────────
+  orchestrator:
+    image: nesrinebousrih/gourmet-go-orchestrator:latest
+    container_name: orchestrator
+    environment:
+      ORDER_SERVICE_HOST: order-service:50051
+      KITCHEN_SERVICE_HOST: kitchen-service:50052
+      ACCOUNTING_SERVICE_HOST: accounting-service:50053
+    depends_on:
+      - order-service
+      - kitchen-service
+      - accounting-service
+    networks:
+      - gourmet-network
+    restart: on-failure
+
+  # ─── API Gateway ──────────────────────────────────────────
+  api-gateway:
+    image: nesrinebousrih/gourmet-go-api-gateway:latest
+    container_name: api-gateway
+    environment:
+      ORDER_SERVICE_HOST: order-service:50051
+      KITCHEN_SERVICE_HOST: kitchen-service:50052
+      ACCOUNTING_SERVICE_HOST: accounting-service:50053
+    ports:
+      - "8000:8000"
+    depends_on:
+      - order-service
+      - kitchen-service
+      - accounting-service
+    networks:
+      - gourmet-network
+    restart: on-failure
+
+  # ─── Frontend ─────────────────────────────────────────────
+  frontend:
+    image: nesrinebousrih/gourmet-go-frontend:latest
+    container_name: frontend
+    ports:
+      - "80:80"
+    depends_on:
+      - api-gateway
+    networks:
+      - gourmet-network
+
+# ─── Volumes ────────────────────────────────────────────────
+volumes:
+  order-db-data:
+  kitchen-db-data:
+  accounting-db-data:
+
+# ─── Network ────────────────────────────────────────────────
+networks:
+  gourmet-network:
+    driver: bridge
