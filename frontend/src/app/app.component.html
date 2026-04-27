@@ -1,0 +1,57 @@
+<div class="container">
+  <header>
+    <h1>🍽️ Gourmet-Go</h1>
+    <p>Distributed Order Management System</p>
+  </header>
+
+  <!-- Create Order -->
+  <div class="card">
+    <h2>Create New Order</h2>
+
+    <div class="form-group">
+      <label>Order ID</label>
+      <div class="input-row">
+        <input [(ngModel)]="orderId" placeholder="e.g. ORD-ABC123" />
+        <button class="btn-secondary" (click)="generateOrderId()">Generate</button>
+      </div>
+    </div>
+
+    <div class="form-group">
+      <label>Amount (€)</label>
+      <input type="number" [(ngModel)]="amount" placeholder="e.g. 45" />
+      <small>💡 Amount &lt; 100 → APPROVED &nbsp;|&nbsp; Amount ≥ 100 → REJECTED</small>
+    </div>
+
+    <button class="btn-primary" (click)="createOrder()" [disabled]="loading">
+      {{ loading ? 'Processing...' : 'Place Order' }}
+    </button>
+
+    <!-- Result -->
+    <div *ngIf="orderResult" class="result" [ngClass]="orderResult.status">
+      <h3>{{ orderResult.status === 'APPROVED' ? '✅ Order Approved!' : '❌ Order Rejected' }}</h3>
+      <p>Order ID: <strong>{{ orderResult.orderId }}</strong></p>
+      <p>Status: <strong>{{ orderResult.status }}</strong></p>
+    </div>
+
+    <div *ngIf="errorMessage" class="result REJECTED">
+      <p>⚠️ {{ errorMessage }}</p>
+    </div>
+  </div>
+
+  <!-- Check Status -->
+  <div class="card">
+    <h2>Check Order Status</h2>
+    <div class="form-group">
+      <label>Order ID</label>
+      <div class="input-row">
+        <input [(ngModel)]="searchOrderId" placeholder="Enter order ID" />
+        <button class="btn-primary" (click)="getOrderStatus()">Search</button>
+      </div>
+    </div>
+
+    <div *ngIf="orderStatus" class="result" [ngClass]="orderStatus.status">
+      <p>Order ID: <strong>{{ orderStatus.orderId }}</strong></p>
+      <p>Status: <strong>{{ orderStatus.status }}</strong></p>
+    </div>
+  </div>
+</div>
