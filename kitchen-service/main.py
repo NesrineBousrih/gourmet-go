@@ -7,6 +7,20 @@ import kitchen_pb2_grpc
 from database import engine, SessionLocal
 from models import Base, KitchenTicket
 
+import time
+
+def wait_for_db():
+    for i in range(10):
+        try:
+            with engine.connect() as conn:
+                print("[Kitchen] DB connection successful")
+                return
+        except Exception as e:
+            print(f"[Kitchen] Waiting for DB... ({i+1}/10): {e}")
+            time.sleep(3)
+    raise Exception("Could not connect to database after 10 retries")
+
+wait_for_db()
 Base.metadata.create_all(bind=engine)
 
 class KitchenServicer(kitchen_pb2_grpc.KitchenServiceServicer):
