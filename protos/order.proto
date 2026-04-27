@@ -1,0 +1,19 @@
+syntax = "proto3";
+package order;
+
+service OrderService {
+  rpc UpdateStatus(UpdateStatusRequest) returns (UpdateStatusResponse);
+  rpc GetStatus(GetStatusRequest) returns (GetStatusResponse);
+}
+
+message UpdateStatusRequest {
+  string orderId = 1;
+  string status  = 2;
+}
+message UpdateStatusResponse { bool acknowledged = 1; }
+
+message GetStatusRequest  { string orderId = 1; }
+message GetStatusResponse {
+  string orderId = 1;
+  string status  = 2;
+}
